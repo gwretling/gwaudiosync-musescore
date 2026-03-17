@@ -20,8 +20,6 @@
 
 #include "vst3_c_api.h"
 
-Steinberg_IPluginFactory* SMTG_STDMETHODCALLTYPE GetPluginFactory (void);
-
 static size_t pointerOffset = sizeof (void*);
 
 static int compare_iid (const Steinberg_TUID id1, const Steinberg_TUID id2)
@@ -157,7 +155,7 @@ static int get_resources_dir (char* out, size_t outSize)
     HMODULE module = NULL;
     char path[4096];
     if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                            (LPCSTR)&GetPluginFactory, &module))
+                            (LPCSTR)&get_resources_dir, &module))
         return 0;
     DWORD len = GetModuleFileNameA(module, path, (DWORD)sizeof(path));
     if (len == 0 || len >= sizeof(path))
@@ -170,7 +168,7 @@ static int get_resources_dir (char* out, size_t outSize)
     return 1;
 #else
     Dl_info info;
-    if (dladdr ((void*)&GetPluginFactory, &info) == 0 || !info.dli_fname)
+    if (dladdr ((void*)&get_resources_dir, &info) == 0 || !info.dli_fname)
         return 0;
 
     char path[4096];
