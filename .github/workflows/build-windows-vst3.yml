@@ -2,28 +2,57 @@ name: build-windows-vst3
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Show repo files
+        shell: pwsh
+        run: |
+          Get-ChildItem -Force
+          Write-Host "---- recursive top ----"
+          Get-ChildItem -Recurse -File | Select-Object -First 200 | ForEach-Object { $_.FullName }
+
       - name: Configure
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 2>&1 | Tee-Object -FilePath configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build
-        run: cmake --build build --config Release
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --verbose 2>&1 | Tee-Object -FilePath build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Upload artifact
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-logs
+          path: |
+            configure.log
+            build.log
+          if-no-files-found: warn
+
+      - name: Archive VST3 bundle
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: GWAudioSyncWin-vst3
           path: |
             build/**/*.vst3
             build/**/Release/**/*.vst3
+          if-no-files-found: warn
